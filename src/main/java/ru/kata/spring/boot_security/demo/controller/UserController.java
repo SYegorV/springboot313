@@ -5,9 +5,10 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import ru.kata.spring.boot_security.demo.models.User;
-import ru.kata.spring.boot_security.demo.service.AccessService;
+import ru.kata.spring.boot_security.demo.repository.UserRepository;
 import ru.kata.spring.boot_security.demo.service.RoleService;
 import ru.kata.spring.boot_security.demo.service.UserService;
+import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,15 +16,15 @@ import java.util.List;
 public class UserController {
     private final UserService userService;
     private final RoleService roleService;
-    private final AccessService accessService;
+    private final UserRepository userRepository;
     @Autowired
-    public UserController(UserService userService, RoleService roleService, AccessService accessService) {
+    public UserController(UserService userService, RoleService roleService, UserRepository userRepository) {
         this.userService = userService;
         this.roleService = roleService;
-        this.accessService = accessService;
+        this.userRepository = userRepository;
     }
 
-    @GetMapping("/")
+    @GetMapping("/") //
     public String printWelcome(Model model) {
         List<String> messages = new ArrayList<>();
         messages.add("welcome");
@@ -31,7 +32,7 @@ public class UserController {
         return "index";
     }
 
-    @GetMapping("/login")
+    @GetMapping("/login") //
     public String loginPage() {
         return "login";
     }
@@ -44,7 +45,6 @@ public class UserController {
 
     @GetMapping("/users/{id}")
     public String getContactById(Model model, @PathVariable("id") long userId) {
-        accessService.doAdminStuff();
         model.addAttribute("user", userService.getById(userId));
         model.addAttribute("roles", roleService.getRoles());
         return "user";
@@ -52,7 +52,6 @@ public class UserController {
 
     @GetMapping("/newUser")
     public String addNewUser(@ModelAttribute("user") User user, Model model) {
-        accessService.doAdminStuff();
         model.addAttribute("users", userService.getUsersList());
         model.addAttribute("roles", roleService.getRoles());
         return "newUser";
@@ -66,14 +65,12 @@ public class UserController {
 
     @DeleteMapping("/users/{id}")
     public String deleteUser(@PathVariable("id") long id) {
-        accessService.doAdminStuff();
         userService.deleteUser(id);
         return "redirect:/users";
     }
 
     @GetMapping("/users/{id}/edit")
     public String updateUser(@PathVariable("id") Long id, Model model) {
-        accessService.doAdminStuff();
         model.addAttribute("usersList", userService.getUsersList());
         model.addAttribute("user", userService.getById(id));
         model.addAttribute("roles", roleService.getRoles());
@@ -88,8 +85,15 @@ public class UserController {
     }
 
     @GetMapping("/admin")
-    public String adminPage() {
-        accessService.doAdminStuff();
+    public String adminPage(Model model, Principal principal) {
+        Long id = userRepository.getUserByMail(principal.getName()).get().getId();
+        model.addAttribute(userService.getById(id));
         return "admin";
+    }
+    @GetMapping("/user")
+    public String userPage(Model model, Principal principal) {
+        Long id = userRepository.getUserByMail(principal.getName()).get().getId();
+        model.addAttribute(userService.getById(id));
+        return "user";
     }
 }
